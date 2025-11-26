@@ -47,7 +47,6 @@ To allow GitHub Actions to interact with your AWS account, you need to add secre
 | `AWS_ACCESS_KEY_ID` | The Access Key ID from Step 1A | `AKIA...` |
 | `AWS_SECRET_ACCESS_KEY` | The Secret Access Key from Step 1A | `wJalr...` |
 | `AWS_REGION` | Your preferred AWS Region | `us-east-1` |
-| `AWS_ACCOUNT_ID` | Your 12-digit AWS Account ID | `123456789012` |
 
 ### 3. App Runner Setup (One-Time)
 
