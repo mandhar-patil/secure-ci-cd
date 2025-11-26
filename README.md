@@ -70,6 +70,9 @@ Once deployed, App Runner provides a **Default Domain**. Your pipeline will now 
 To run the application locally:
 
 ```bash
+# Navigate to the app directory
+cd app
+
 # Install dependencies
 npm install
 
