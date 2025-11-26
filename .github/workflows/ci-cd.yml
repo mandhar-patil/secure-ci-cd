@@ -59,8 +59,8 @@ jobs:
         working-directory: ./app
         run: gitleaks detect --source . --exit-code 1
 
-  build-and-deploy:
-    name: Build, Push to ECR, and Deploy to ECS
+  build-and-push-ecr:
+    name: Build and Push to AWS ECR
     needs: cicd-security
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
@@ -85,7 +85,7 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: secure-ci-cd
-          IMAGE_TAG: ${{ github.sha }}
+          IMAGE_TAG: latest
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./app
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
@@ -95,30 +95,10 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: secure-ci-cd
-          IMAGE_TAG: ${{ github.sha }}
+          IMAGE_TAG: latest
         run: |
           echo "Starting container..."
           docker run -d -p 3000:3000 --name test-app $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           sleep 10
           curl -f http://localhost:3000 || exit 1
           docker stop test-app
-
-      - name: Replace AWS Account ID in Task Definition
-        run: |
-          sed -i 's/${AWS_ACCOUNT_ID}/${{ secrets.AWS_ACCOUNT_ID }}/g' .aws/task-definition.json
-
-      - name: Fill in the new image ID in the Amazon ECS task definition
-        id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: .aws/task-definition.json
-          container-name: secure-ci-cd-app
-          image: ${{ steps.build-image.outputs.image }}
-
-      - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ secrets.ECS_SERVICE }}
-          cluster: ${{ secrets.ECS_CLUSTER }}
-          wait-for-service-stability: true
