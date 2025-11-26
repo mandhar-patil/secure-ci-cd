@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure CI/CD Pipeline</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <main class="container">
+        <header>
+            <div class="badge">v1.0.0 Production Ready</div>
+            <h1>Secure <span class="gradient-text">CI/CD</span> Pipeline</h1>
+            <p class="subtitle">Automated Security Scanning • Dockerized Deployment • Modern Architecture</p>
+        </header>
+
+        <div class="cards-grid">
+            <div class="card">
+                <div class="icon">🛡️</div>
+                <h3>Semgrep SAST</h3>
+                <p>Static analysis to find bugs and enforce code standards before they reach production.</p>
+            </div>
+            <div class="card">
+                <div class="icon">📦</div>
+                <h3>npm Audit</h3>
+                <p>Automated dependency scanning to detect and fix vulnerabilities in your supply chain.</p>
+            </div>
+            <div class="card">
+                <div class="icon">🔑</div>
+                <h3>Gitleaks</h3>
+                <p>Secret detection to prevent API keys and credentials from being committed to the repo.</p>
+            </div>
+            <div class="card">
+                <div class="icon">🚀</div>
+                <h3>Docker Ready</h3>
+                <p>Containerized application ready for deployment to any cloud provider or orchestrator.</p>
+            </div>
+        </div>
+
+        <footer>
+            <button class="cta-button">View Documentation</button>
+            <p class="status">System Status: <span class="status-indicator"></span> Operational</p>
+        </footer>
+    </main>
+
+    <script>
+        // Simple interaction for the button
+        document.querySelector('.cta-button').addEventListener('click', () => {
+            alert('Documentation is currently being updated!');
+        });
+    </script>
+</body>
+</html>
