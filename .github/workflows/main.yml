@@ -1,0 +1,115 @@
+name: app
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "app/**"
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "app/**"
+
+jobs:
+  cicd-security:
+    name: CI/CD Security Pipeline
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out code
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      # 2. Set up Node
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      # 3. Install dependencies
+      - name: Install Dependencies
+        working-directory: ./app
+        run: npm install
+
+      # 4. Install Semgrep (CLI via pip)
+      - name: Install Semgrep
+        working-directory: ./app
+        run: pip install semgrep
+
+      # 5. SAST with Semgrep
+      - name: SAST (Semgrep)
+        working-directory: ./app
+        run: semgrep --config p/ci --include='app/**/*.js'
+
+      # 6. SCA with npm audit (Dependency check)
+      - name: SCA (npm audit)
+        working-directory: ./app
+        run: npm audit --audit-level=high
+
+      # 7. Install Gitleaks (Fixed version v8.20.1)
+      - name: Install Gitleaks
+        working-directory: ./app
+        run: |
+          curl -LO https://github.com/gitleaks/gitleaks/releases/download/v8.20.1/gitleaks_8.20.1_linux_x64.tar.gz
+          tar -zxvf gitleaks_8.20.1_linux_x64.tar.gz
+          sudo mv gitleaks /usr/local/bin/
+
+      # 8. Secrets Scanning with Gitleaks
+      - name: Run Gitleaks
+        working-directory: ./app
+        run: gitleaks detect --source . --exit-code 1
+
+  build-and-push-ecr:
+    name: Build and Push to AWS ECR
+    needs: cicd-security
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: secure-ci-cd
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./app
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Verify Docker Image (Run & Curl)
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: secure-ci-cd
+          IMAGE_TAG: latest
+        run: |
+          echo "Starting container..."
+          docker run -d -p 3000:3000 --name test-app $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          sleep 10
+          curl -f http://localhost:3000 || exit 1
+          docker stop test-app
+
+      - name: Get App Runner URL
+        run: |
+          echo "Retrieving App Runner Service URL..."
+          SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='secure-ci-cd-service'].ServiceArn" --output text)
+          if [ -z "$SERVICE_ARN" ]; then
+            echo "App Runner service 'secure-ci-cd-service' not found. Please create it manually as per README."
+          else
+            SERVICE_URL=$(aws apprunner describe-service --service-arn $SERVICE_ARN --query "Service.ServiceUrl" --output text)
+            echo "✅ Application is live at: https://$SERVICE_URL"
+          fi
